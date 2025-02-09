@@ -18,6 +18,7 @@
 #define I2C_PORT i2c1
 #define I2C_SDA 14
 #define I2C_SCL 15
+#define joy_btn 22
 
 // Variáveis globais para armazenar a cor do LED
 uint8_t led_r = 8; // Intensidade do vermelho
@@ -52,13 +53,34 @@ void WS2812_setup();
 void SSD1306_setup();
 static void toggle_led(uint led_pin, bool *led_state, const char *message_on, const char *message_off);
 
-int main()
-{
+// Função principal
+int main() {
     stdio_init_all();
+    initGPIO(); // Inicializa os pinos GPIO
+    WS2812_setup(); // Configura o controlador de LEDs WS2812
+    i2c_init(I2C_PORT, 400 * 1000); //Inicializa o i2c em 400kHz
+    SSD1306_setup(); // Configura o display SSD1306
 
+    // Configuração das interrupções dos botões
+    gpio_set_irq_enabled_with_callback(btn_a, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler);
+    gpio_set_irq_enabled_with_callback(btn_b, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler);
+    gpio_set_irq_enabled_with_callback(joy_btn, GPIO_IRQ_EDGE_FALL, true, &gpio_irq_handler);
+    
     while (true) {
-        printf("Hello, world!\n");
-        sleep_ms(1000);
+        if (stdio_usb_connected()) {
+            char c;
+            if (scanf(" %c", &c) == 1) { // O espaço antes do %c evita captura de espaços em branco indesejados.
+                ssd1306_fill(&ssd, !cor); // Limpa o display
+                ssd1306_draw_char(&ssd, c, 8, 10);
+                ssd1306_send_data(&ssd); // Atualiza o display
+                
+                // Se o caractere for um número de 0 a 9, exibir na matriz 5x5 WS2812
+                if (c >= '0' && c <= '9') {
+                    int num = c - '0'; // Converte o caractere numérico para um inteiro
+                    atualizaEstado(num); 
+                }
+            }
+        }
     }
 }
 
@@ -78,6 +100,10 @@ void initGPIO() {
     gpio_init(btn_b);
     gpio_set_dir(btn_b, false);
     gpio_pull_up(btn_b);
+    //inicialização do botão do joystick
+    gpio_init(joy_btn);
+    gpio_set_dir(joy_btn, false);
+    gpio_pull_up(joy_btn);
 }
 
 // Acende/apaga os LEDS RGB e envia os dados para o display e para o monitor serial
@@ -103,6 +129,9 @@ static void gpio_irq_handler(uint gpio, uint32_t events) {
         } 
         else if (gpio == btn_b) {
             toggle_led(led_pin_blue, &b_led_on, "LED Azul: ON", "LED Azul: OFF");
+        }
+        else if (gpio == joy_btn){
+            reset_usb_boot(0, 0);
         }
     }
 }
@@ -251,6 +280,7 @@ void WS2812_setup(){
     int sm = 0;
     uint offset = pio_add_program(pio, &ws2812_program);
     ws2812_program_init(pio, sm, offset, WS2812_PIN, 800000, IS_RGBW);
+    atualizaFita(led_r, led_g, led_b);
 }
 
 // Configura o display SSD1306
