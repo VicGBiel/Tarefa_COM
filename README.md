@@ -37,5 +37,10 @@ Este projeto implementa o controle de uma matriz de LEDs WS2812 e um display OLE
 5. Utilize os botões físicos para alternar os LEDs indicadores.
 6. Pressione o botão do joystick para reiniciar no modo bootloader.
 
-Autor: Victor Gabriel Guimarães Lopes
+## Vídeo Demonstrativo
 
+[Assista ao vídeo aqui](https://youtu.be/25KiD8pOpQo)
+
+---
+
+**Autor:** Victor Gabriel Guimarães Lopes
